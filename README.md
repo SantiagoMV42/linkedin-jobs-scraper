@@ -5,7 +5,7 @@ Copy-paste examples (Python, Node.js, cURL, n8n) for four job and company data s
 | Scraper | What you get | Price |
 |---|---|---|
 | [LinkedIn Jobs Scraper](https://apify.com/santiagomv/linkedin-jobs) | Job search results with full descriptions, parsed salary, applicants, seniority, industry | $1 / 1,000 jobs |
-| [Career Site Jobs (Greenhouse, Lever, Ashby, Workable +5)](https://apify.com/santiagomv/ats-jobs) | Every open job from company career pages, one schema, through official public job-board APIs | $1.50 / 1,000 jobs |
+| [Career Site Jobs (Workday, Greenhouse, Lever, Ashby +6)](https://apify.com/santiagomv/ats-jobs) | Every open job from company career pages, one schema, through official public job-board APIs | $1.50 / 1,000 jobs |
 | [LinkedIn Company Scraper](https://apify.com/santiagomv/linkedin-company) | Website, industry, size, employee and follower counts, HQ, offices, specialties, similar companies | $2 / 1,000 companies |
 | [LinkedIn Company Posts Scraper](https://apify.com/santiagomv/linkedin-company-posts) | Recent company page posts: text, date, likes, comments, reposts, images | $1 / 1,000 posts |
 
@@ -23,7 +23,7 @@ All four have an **only-new** mode: schedule them daily and each run returns onl
 | Use case | Python | Node.js |
 |---|---|---|
 | Daily LinkedIn job alert to CSV (new jobs only) | [python/linkedin_jobs_to_csv.py](python/linkedin_jobs_to_csv.py) | [node/linkedin-jobs.mjs](node/linkedin-jobs.mjs) |
-| All open roles at a list of companies (Greenhouse, Lever, Ashby…) | [python/career_site_jobs.py](python/career_site_jobs.py) | [node/career-site-jobs.mjs](node/career-site-jobs.mjs) |
+| All open roles at a list of companies (Workday, Greenhouse, Lever, Ashby…) | [python/career_site_jobs.py](python/career_site_jobs.py) | [node/career-site-jobs.mjs](node/career-site-jobs.mjs) |
 | Enrich a list of companies with LinkedIn firmographics | [python/enrich_companies.py](python/enrich_companies.py) | |
 | Track competitors' LinkedIn posts | [python/competitor_posts.py](python/competitor_posts.py) | |
 | No code: n8n daily job alert | [n8n/linkedin-jobs-daily.json](n8n/linkedin-jobs-daily.json) | |

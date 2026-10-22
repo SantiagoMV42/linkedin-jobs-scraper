@@ -1,6 +1,6 @@
 """All open roles at a list of companies, straight from their career sites.
 
-Works with Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Recruitee,
+Works with Workday, Greenhouse, Lever, Ashby, Workable, SmartRecruiters, Recruitee,
 Personio, Breezy and Rippling boards. Paste careers-page URLs or ATS board URLs.
 
 pip install apify-client
@@ -17,6 +17,7 @@ run_input = {
         "https://boards.greenhouse.io/stripe",
         "https://jobs.ashbyhq.com/openai",
         "https://jobs.lever.co/palantir",
+        "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite",
     ],
     "titleKeywords": ["engineer"],
     "remoteOnly": False,
