@@ -1,17 +1,18 @@
 # LinkedIn Jobs, Company & Career-Site Scrapers: code examples
 
-Copy-paste examples (Python, Node.js, cURL, n8n) for four job and company data scrapers that run on [Apify](https://apify.com). Each one needs no LinkedIn login or cookies, and you pay only per result saved.
+Copy-paste examples (Python, Node.js, cURL, n8n) for five job and company data scrapers that run on [Apify](https://apify.com). Each one needs no LinkedIn login or cookies, and you pay only per result saved.
 
 | Scraper | What you get | Price |
 |---|---|---|
 | [LinkedIn Jobs Scraper](https://apify.com/santiagomv/linkedin-jobs) | Job search results with full descriptions, parsed salary, applicants, seniority, industry | $1 / 1,000 jobs |
 | [Career Site Jobs (Workday, Greenhouse, Lever, Ashby +6)](https://apify.com/santiagomv/ats-jobs) | Every open job from company career pages, one schema, through official public job-board APIs | $1.50 / 1,000 jobs |
+| [Workday Jobs Scraper](https://apify.com/santiagomv/workday-jobs) | Any myworkdayjobs.com site: keyword search, Workday's own country/category filters by name, exact dates, parsed salary | $1 / 1,000 jobs |
 | [LinkedIn Company Scraper](https://apify.com/santiagomv/linkedin-company) | Website, industry, size, employee and follower counts, HQ, offices, specialties, similar companies | $2 / 1,000 companies |
 | [LinkedIn Company Posts Scraper](https://apify.com/santiagomv/linkedin-company-posts) | Recent company page posts: text, date, likes, comments, reposts, images | $1 / 1,000 posts |
 
-All four have an **only-new** mode: schedule them daily and each run returns only the jobs or posts you haven't received yet. Repeats are free.
+All five have an **only-new** mode: schedule them daily and each run returns only the jobs or posts you haven't received yet. Repeats are free.
 
-> ⚠️ The LinkedIn scrapers read LinkedIn's public, logged-out pages. LinkedIn's User Agreement restricts automated access, so using them **may break LinkedIn's terms**, and LinkedIn may block IPs or accounts linked to that use. You are responsible for how you use them and the data, including data-protection law (e.g. GDPR). Not affiliated with, endorsed by, or sponsored by LinkedIn, Greenhouse, Lever, Ashby or Workable.
+> ⚠️ The LinkedIn scrapers read LinkedIn's public, logged-out pages. LinkedIn's User Agreement restricts automated access, so using them **may break LinkedIn's terms**, and LinkedIn may block IPs or accounts linked to that use. You are responsible for how you use them and the data, including data-protection law (e.g. GDPR). Not affiliated with, endorsed by, or sponsored by LinkedIn, Greenhouse, Lever, Ashby, Workable or Workday.
 
 ## Setup
 
@@ -24,6 +25,7 @@ All four have an **only-new** mode: schedule them daily and each run returns onl
 |---|---|---|
 | Daily LinkedIn job alert to CSV (new jobs only) | [python/linkedin_jobs_to_csv.py](python/linkedin_jobs_to_csv.py) | [node/linkedin-jobs.mjs](node/linkedin-jobs.mjs) |
 | All open roles at a list of companies (Workday, Greenhouse, Lever, Ashby…) | [python/career_site_jobs.py](python/career_site_jobs.py) | [node/career-site-jobs.mjs](node/career-site-jobs.mjs) |
+| Workday jobs by keyword and country, with salary, to CSV | [python/workday_jobs_salary.py](python/workday_jobs_salary.py) | |
 | Enrich a list of companies with LinkedIn firmographics | [python/enrich_companies.py](python/enrich_companies.py) | |
 | Track competitors' LinkedIn posts | [python/competitor_posts.py](python/competitor_posts.py) | |
 | No code: n8n daily job alert | [n8n/linkedin-jobs-daily.json](n8n/linkedin-jobs-daily.json) | |
@@ -36,7 +38,7 @@ curl -X POST "https://api.apify.com/v2/acts/santiagomv~linkedin-jobs/run-sync-ge
   -d '{"searchQueries":["data engineer"],"location":"United States","datePosted":"day","maxJobsPerSearch":50}'
 ```
 
-Swap `santiagomv~linkedin-jobs` for `santiagomv~ats-jobs`, `santiagomv~linkedin-company` or `santiagomv~linkedin-company-posts`, with that scraper's input. Synchronous calls time out after 5 minutes; for bigger runs use the client libraries below, which wait for the run to finish.
+Swap `santiagomv~linkedin-jobs` for `santiagomv~ats-jobs`, `santiagomv~workday-jobs`, `santiagomv~linkedin-company` or `santiagomv~linkedin-company-posts`, with that scraper's input. Synchronous calls time out after 5 minutes; for bigger runs use the client libraries below, which wait for the run to finish.
 
 ### Make, Zapier and other tools
 
