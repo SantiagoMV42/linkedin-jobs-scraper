@@ -30,6 +30,18 @@ All five have an **only-new** mode: schedule them daily and each run returns onl
 | Track competitors' LinkedIn posts | [python/competitor_posts.py](python/competitor_posts.py) | |
 | No code: n8n daily job alert | [n8n/linkedin-jobs-daily.json](n8n/linkedin-jobs-daily.json) | |
 
+### Also: YouTube transcripts
+
+[YouTube Transcript Scraper](https://apify.com/santiagomv/youtube-transcripts) returns the transcript of any video, Short or live replay as plain text, timestamped lines or timed segments, plus title, channel, views and duration. $4 / 1,000 transcripts; videos without captions are free. Example: [python/youtube_transcripts_to_markdown.py](python/youtube_transcripts_to_markdown.py) saves each transcript as a Markdown file.
+
+```bash
+curl -X POST "https://api.apify.com/v2/acts/santiagomv~youtube-transcripts/run-sync-get-dataset-items?token=$APIFY_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"videos":["https://www.youtube.com/watch?v=aircAruvnKk"],"language":"en"}'
+```
+
+> ⚠️ Automated access may be against YouTube's Terms of Service, and transcripts are their creators' copyrighted work; you're responsible for how you use them. Not affiliated with YouTube or Google.
+
 ### cURL: one call, results back as JSON
 
 ```bash
