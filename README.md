@@ -42,6 +42,18 @@ curl -X POST "https://api.apify.com/v2/acts/santiagomv~youtube-transcripts/run-s
 
 > ⚠️ Automated access may be against YouTube's Terms of Service, and transcripts are their creators' copyrighted work; you're responsible for how you use them. Not affiliated with YouTube or Google.
 
+### Also: YouTube comments
+
+[YouTube Comments Scraper](https://apify.com/santiagomv/youtube-comments) returns comments and replies from any video with author, likes, reply count, creator hearts and date, sorted by top or newest. $0.50 / 1,000 comments. Example: [python/youtube_comments_to_csv.py](python/youtube_comments_to_csv.py) exports the newest 500 comments to a CSV.
+
+```bash
+curl -X POST "https://api.apify.com/v2/acts/santiagomv~youtube-comments/run-sync-get-dataset-items?token=$APIFY_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"videos":["https://www.youtube.com/watch?v=aircAruvnKk"],"maxComments":50,"sortBy":"newest"}'
+```
+
+> ⚠️ Automated access may be against YouTube's Terms of Service, and comments are personal data of their authors; you're responsible for how you use them (including GDPR). Not affiliated with YouTube or Google.
+
 ### cURL: one call, results back as JSON
 
 ```bash
