@@ -21,7 +21,9 @@ run_input = {
         "https://salesforce.wd12.myworkdayjobs.com/External_Career_Site",
     ],
     "searchQueries": ["machine learning", "data engineer"],
-    "filters": ["Remote"],
+    # Filter names differ per site (NVIDIA: "Remote"; Adobe: "Remote California"), so add
+    # "filters" per site after checking AVAILABLE_FILTERS from a first run.
+    "excludeTitleKeywords": ["intern"],
     "postedWithinDays": 14,
     "descriptionFormat": "none",
 }
