@@ -11,7 +11,9 @@ import argparse
 import json
 import math
 import os
+from pathlib import Path
 import sys
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -67,9 +69,26 @@ except urllib.error.HTTPError as e:
     sys.exit(f"HTTP {e.code}: {e.read().decode(errors='replace')[:500]}")
 
 out = args.out or f"{args.mode}.jsonl"
-with open(out, "w", encoding="utf-8") as f:
-    for item in items:
-        f.write(json.dumps(item, ensure_ascii=False) + "\n")
+if not isinstance(items, list) or any(
+    not isinstance(item, dict) or not isinstance(item.get("videoId"), str)
+    or not item["videoId"] for item in items
+):
+    raise ValueError
+
+output_path = Path(out)
+temporary_path = None
+try:
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=output_path.parent,
+                                     prefix=".youtube-", suffix=".jsonl", delete=False) as f:
+        temporary_path = Path(f.name)
+        for item in items:
+            f.write(json.dumps(item, ensure_ascii=False) + "\n")
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(temporary_path, output_path)
+finally:
+    if temporary_path is not None:
+        temporary_path.unlink(missing_ok=True)
 
 videos = {item["videoId"] for item in items}
 print(f"{len(items)} rows from {len(videos)} videos -> {out}")
