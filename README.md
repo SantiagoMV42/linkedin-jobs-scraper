@@ -55,6 +55,10 @@ curl -X POST "https://api.apify.com/v2/acts/santiagomv~youtube-comments/run-sync
 
 > ⚠️ Automated access may be against YouTube's Terms of Service, and comments are personal data of their authors; you're responsible for how you use them (including GDPR). Not affiliated with YouTube or Google.
 
+### Also: YouTube playlists and channels
+
+[youtube/](youtube/) is a dependency-free Python script and short tutorial for getting the transcripts or comments of a playlist's or channel's videos, with caps on videos and pages.
+
 ### cURL: one call, results back as JSON
 
 ```bash
