@@ -55,6 +55,12 @@ The synchronous endpoint returns dataset rows only. Videos that failed (no capti
 
 The endpoint waits at most 5 minutes. If it times out (HTTP 408) the run keeps going in Apify; collect its dataset from the Console, or lower `--max-videos`.
 
+## Troubleshooting
+
+- **`0 rows`**: check the run's key-value store. `FAILURES` gives the recorded reason for each failed video, which may be missing captions, comments off, or blocking and temporary fetch errors. `SOURCE_EXPANSION` shows whether each playlist or channel was read and how many videos it added; if it added none, check that it's a playlist or `/channel/UC…` URL.
+- **`HTTP 408`**: the endpoint stopped waiting; this alone doesn't tell you how the run went. Check the run's status in [Apify Console](https://console.apify.com/actors/runs) and collect its dataset when it's ready. Starting it again may incur another charge.
+- **Comments from fewer videos than `--max-videos`**: the `--max-cost` cap probably stopped the run (about 200 comments at $0.10), or some videos have comments off (see `FAILURES`). Raise `--max-cost` or lower `--max-comments`.
+
 ## Before you use it
 
 Automated access may be against YouTube's Terms of Service, and YouTube may block or rate-limit the IP addresses or accounts involved. Transcripts are their creators' copyrighted work, and comments are personal data of their authors. You are responsible for how you use these actors and the data, including copyright, privacy law (such as GDPR) and YouTube's terms. Not affiliated with, endorsed by or sponsored by YouTube or Google LLC.
