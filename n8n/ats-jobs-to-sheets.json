@@ -1,0 +1,284 @@
+{
+  "name": "ATS jobs to Sheets \u2014 local draft",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual",
+      "name": "Manual run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 8,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "daily",
+      "name": "Daily run",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/santiagomv~ats-jobs/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"companies\": [\"greenhouse:stripe\"], \"maxJobs\": 25, \"onlyNewJobs\": false, \"descriptionFormat\": \"none\"}",
+        "options": {
+          "timeout": 300000,
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true,
+              "neverError": false
+            }
+          }
+        }
+      },
+      "id": "apify",
+      "name": "Fetch ATS jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        260,
+        100
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_BUYER_HEADER_AUTH_CREDENTIAL_ID",
+          "name": "Buyer Apify Authorization header"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const rows = new Map();\nfor (const [inputIndex, item] of $input.all().entries()) {\n  const response = item.json;\n  if (response.statusCode !== 201 || !Array.isArray(response.body)) {\n    throw new Error('Expected HTTP 201 with an Apify dataset JSON array');\n  }\n  for (const job of response.body) {\n    if (!job || typeof job !== 'object' || typeof job.url !== 'string' || !/^https?:\\/\\/[^\\s]+$/.test(job.url)) {\n      throw new Error('Dataset contains a job without a valid HTTP(S) URL; no rows written');\n    }\n    const fields = ['url', 'title', 'company', 'ats', 'location', 'isRemote', 'employmentType', 'postedAt', 'applyUrl', 'scrapedAt'];\n    const row = Object.fromEntries(fields.map((field) => [field, job[field] ?? '']));\n    rows.set(job.url, { json: row, pairedItem: { item: inputIndex } });\n  }\n}\nreturn [...rows.values()];"
+      },
+      "id": "rows",
+      "name": "Validate and split jobs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_BUYER_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Jobs",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "url": "={{ $json.url }}",
+            "title": "={{ $json.title }}",
+            "company": "={{ $json.company }}",
+            "ats": "={{ $json.ats }}",
+            "location": "={{ $json.location }}",
+            "isRemote": "={{ $json.isRemote }}",
+            "employmentType": "={{ $json.employmentType }}",
+            "postedAt": "={{ $json.postedAt }}",
+            "applyUrl": "={{ $json.applyUrl }}",
+            "scrapedAt": "={{ $json.scrapedAt }}"
+          },
+          "matchingColumns": [
+            "url"
+          ],
+          "schema": [
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ats",
+              "displayName": "ats",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "location",
+              "displayName": "location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "isRemote",
+              "displayName": "isRemote",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "employmentType",
+              "displayName": "employmentType",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "postedAt",
+              "displayName": "postedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "applyUrl",
+              "displayName": "applyUrl",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "scrapedAt",
+              "displayName": "scrapedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "sheets",
+      "name": "Upsert jobs by URL",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        780,
+        100
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_BUYER_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Buyer Google Sheets OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual run": {
+      "main": [
+        [
+          {
+            "node": "Fetch ATS jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily run": {
+      "main": [
+        [
+          {
+            "node": "Fetch ATS jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch ATS jobs": {
+      "main": [
+        [
+          {
+            "node": "Validate and split jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate and split jobs": {
+      "main": [
+        [
+          {
+            "node": "Upsert jobs by URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Etc/UTC"
+  },
+  "pinData": {}
+}

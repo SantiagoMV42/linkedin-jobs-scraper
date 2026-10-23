@@ -10,7 +10,7 @@ Copy-paste examples (Python, Node.js, cURL, n8n) for five job and company data s
 | [LinkedIn Company Scraper](https://apify.com/santiagomv/linkedin-company) | Website, industry, size, employee and follower counts, HQ, offices, specialties, similar companies | $2 / 1,000 companies |
 | [LinkedIn Company Posts Scraper](https://apify.com/santiagomv/linkedin-company-posts) | Recent company page posts: text, date, likes, comments, reposts, images | $1 / 1,000 posts |
 
-All five have an **only-new** mode: schedule them daily and each run returns only the jobs or posts you haven't received yet. Repeats are free.
+The four job and post scrapers have an **only-new** mode: schedule them daily and each run returns only the jobs or posts you haven't received yet. Repeats aren't saved, so they aren't charged as results. (Company Posts needs a state store name for this.) The Company Scraper has no only-new mode.
 
 > ⚠️ The LinkedIn scrapers read LinkedIn's public, logged-out pages. LinkedIn's User Agreement restricts automated access, so using them **may break LinkedIn's terms**, and LinkedIn may block IPs or accounts linked to that use. You are responsible for how you use them and the data, including data-protection law (e.g. GDPR). Not affiliated with, endorsed by, or sponsored by LinkedIn, Greenhouse, Lever, Ashby, Workable or Workday.
 
@@ -29,6 +29,7 @@ All five have an **only-new** mode: schedule them daily and each run returns onl
 | Enrich a list of companies with LinkedIn firmographics | [python/enrich_companies.py](python/enrich_companies.py) | |
 | Track competitors' LinkedIn posts | [python/competitor_posts.py](python/competitor_posts.py) | |
 | No code: n8n daily job alert | [n8n/linkedin-jobs-daily.json](n8n/linkedin-jobs-daily.json) | |
+| No code, **experimental** (n8n/Sheets steps untested): n8n career-site jobs to Google Sheets | [n8n/ats-jobs-to-sheets.md](n8n/ats-jobs-to-sheets.md) | |
 
 ### Also: YouTube transcripts
 
