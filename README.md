@@ -59,6 +59,10 @@ curl -X POST "https://api.apify.com/v2/acts/santiagomv~youtube-comments/run-sync
 
 [youtube/](youtube/) is a dependency-free Python script and short tutorial for getting the transcripts or comments of a playlist's or channel's videos, with caps on videos and pages.
 
+### Also: enrich a company list into a CSV
+
+[companies/](companies/) is a dependency-free Python script that turns a list of LinkedIn company URLs or slugs into a CSV with website, industry, size, headcount and HQ, with a default cap of 10 companies and $0.02 per run.
+
 ### cURL: one call, results back as JSON
 
 ```bash
