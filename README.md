@@ -55,6 +55,18 @@ curl -X POST "https://api.apify.com/v2/acts/santiagomv~youtube-comments/run-sync
 
 > ⚠️ Automated access may be against YouTube's Terms of Service, and comments are personal data of their authors; you're responsible for how you use them (including GDPR). Not affiliated with YouTube or Google.
 
+### Also: YouTube channel videos
+
+[YouTube Channel Videos Scraper](https://apify.com/santiagomv/youtube-channel-videos) lists the videos of channels (`@handle` or `/channel/UC…`) and playlists with title, views, upload date, duration and thumbnail. Set `newerThanDays` to get only recent uploads, e.g. for a daily new-video alert. $0.80 / 1,000 videos.
+
+```bash
+curl -X POST "https://api.apify.com/v2/acts/santiagomv~youtube-channel-videos/run-sync-get-dataset-items?token=$APIFY_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"sources":["https://www.youtube.com/@GoogleDevelopers"],"newerThanDays":7}'
+```
+
+> ⚠️ Automated access may be against YouTube's Terms of Service; you're responsible for how you use it and the data. Not affiliated with YouTube or Google.
+
 ### Also: YouTube playlists and channels
 
 [youtube/](youtube/) is a dependency-free Python script and short tutorial for getting the transcripts or comments of a playlist's or channel's videos, with caps on videos and pages.
