@@ -25,7 +25,7 @@ export APIFY_TOKEN=your_token
 python3 channel_to_jsonl.py transcripts "https://www.youtube.com/playlist?list=UU_x5XG1OV2P6uZZ5FSM9Ttw"
 
 # Comments from up to 10 videos on a channel's Videos tab, 50 each, capped at $0.10
-python3 channel_to_jsonl.py comments "https://www.youtube.com/channel/UC_x5XG1OV2P6uZZ5FSM9Ttw" --max-videos 10
+python3 channel_to_jsonl.py comments "https://www.youtube.com/@GoogleDevelopers" --max-videos 10
 ```
 
 Each run writes `transcripts.jsonl` or `comments.jsonl`, one JSON object per line. Options: `--max-videos` (1–10000), `--max-pages` (1–100), `--max-comments` (0 = unlimited), `--max-cost` (USD, default 0.10), `--language`, `--out`.
@@ -41,7 +41,7 @@ curl -X POST "https://api.apify.com/v2/acts/santiagomv~youtube-transcripts/run-s
 ## What it accepts
 
 - **Playlists**: `youtube.com/playlist?list=…`.
-- **Channels**: `youtube.com/channel/UC…`, Videos tab only (no Shorts or live tabs). **`@handles`, `/c/` and `/user/` links aren't supported**; you need the channel's canonical ID, which starts with `UC`.
+- **Channels**: `youtube.com/@handle` (or `/@handle/videos`) and `youtube.com/channel/UC…`, Videos tab only (no Shorts or live tabs). Handle lookup is free and gets up to 4 tries; if it fails, the channel shows up in `FAILURES`, so paste its `/channel/UC…` link instead. Old `/c/` and `/user/` links aren't supported.
 - Single videos go in the actors' `videos` field instead; see each actor's page.
 
 Two caps bound every run: `maxVideos` (unique videos in total) and `maxSourcePages` (YouTube listing pages read in total; a playlist page holds up to about 100 videos, a channel page about 30). The actors read what YouTube lists; they don't promise every video of a large channel or any particular order.
@@ -57,7 +57,7 @@ The endpoint waits at most 5 minutes. If it times out (HTTP 408) the run keeps g
 
 ## Troubleshooting
 
-- **`0 rows`**: check the run's key-value store. `FAILURES` gives the recorded reason for each failed video, which may be missing captions, comments off, or blocking and temporary fetch errors. `SOURCE_EXPANSION` shows whether each playlist or channel was read and how many videos it added; if it added none, check that it's a playlist or `/channel/UC…` URL.
+- **`0 rows`**: check the run's key-value store. `FAILURES` gives the recorded reason for each failed video, which may be missing captions, comments off, or blocking and temporary fetch errors. `SOURCE_EXPANSION` shows whether each playlist or channel was read and how many videos it added; if it added none, check that it's a playlist, `@handle` or `/channel/UC…` URL.
 - **`HTTP 408`**: the endpoint stopped waiting; this alone doesn't tell you how the run went. Check the run's status in [Apify Console](https://console.apify.com/actors/runs) and collect its dataset when it's ready. Starting it again may incur another charge.
 - **Comments from fewer videos than `--max-videos`**: the `--max-cost` cap probably stopped the run (about 200 comments at $0.10), or some videos have comments off (see `FAILURES`). Raise `--max-cost` or lower `--max-comments`.
 

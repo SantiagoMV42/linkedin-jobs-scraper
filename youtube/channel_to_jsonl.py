@@ -5,7 +5,7 @@ small: it waits at most 5 minutes. --max-cost is sent as the run's maxTotalCharg
 Apify stops the run once it reaches that many USD of charges.
 
 APIFY_TOKEN=... python channel_to_jsonl.py transcripts https://www.youtube.com/playlist?list=UU...
-APIFY_TOKEN=... python channel_to_jsonl.py comments https://www.youtube.com/channel/UC... --max-videos 10
+APIFY_TOKEN=... python channel_to_jsonl.py comments https://www.youtube.com/@GoogleDevelopers --max-videos 10
 """
 import argparse
 import json
@@ -39,7 +39,7 @@ def positive_usd(text):
 
 parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
 parser.add_argument("mode", choices=ACTORS)
-parser.add_argument("source", help="playlist URL or youtube.com/channel/UC... URL (no @handles)")
+parser.add_argument("source", help="playlist, youtube.com/@handle or youtube.com/channel/UC... URL")
 parser.add_argument("--max-videos", type=int_in(1, 10000), default=20, help="videos in total, 1-10000 (default 20)")
 parser.add_argument("--max-pages", type=int_in(1, 100), default=3, help="playlist/channel pages read, 1-100 (default 3)")
 parser.add_argument("--max-comments", type=int_in(0), default=50, help="comments per video, comments mode; 0 = unlimited (default 50)")
