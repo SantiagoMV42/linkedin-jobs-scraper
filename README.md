@@ -1,6 +1,6 @@
 # LinkedIn Jobs, Company, Career-Site & YouTube Scrapers: code examples
 
-Copy-paste examples (Python, Node.js, cURL, n8n) for eight scrapers that run on [Apify](https://apify.com): five for job and company data, and three for YouTube transcripts, comments and channel videos. None of them needs a login or cookies. The actor charges per result saved; Apify bills its platform usage separately, depending on your plan.
+Copy-paste examples (Python, Node.js, cURL, n8n) for eight scrapers that run on [Apify](https://apify.com): five for job and company data, and three for YouTube transcripts, comments and channel videos. None of them needs a login or cookies. Each scraper charges per result saved, and that fee includes the run's compute and proxy usage; reading or exporting the dataset afterwards is standard Apify platform usage.
 
 | Scraper | What you get | Price |
 |---|---|---|
@@ -32,7 +32,7 @@ The four job and post scrapers have an **only-new** mode: schedule them daily an
 | Recent open roles matching a keyword at a list of companies (Workday, Greenhouse, Lever, Ashby…; Workday results are capped) | [python/career_site_jobs.py](python/career_site_jobs.py) | [node/career-site-jobs.mjs](node/career-site-jobs.mjs) |
 | Workday jobs by keyword and country, with salary, to CSV | [python/workday_jobs_salary.py](python/workday_jobs_salary.py) | |
 | Enrich a list of companies with LinkedIn firmographics | [python/enrich_companies.py](python/enrich_companies.py) | |
-| Company list to CSV with caps (10 companies / $0.02 actor charges by default; platform usage billed separately), step-by-step guide | [companies/](companies/) | |
+| Company list to CSV with caps (10 companies / $0.02 of charges per run by default), step-by-step guide | [companies/](companies/) | |
 | Track competitors' LinkedIn posts | [python/competitor_posts.py](python/competitor_posts.py) | |
 | Save YouTube transcripts as Markdown files (captioned videos only) | [python/youtube_transcripts_to_markdown.py](python/youtube_transcripts_to_markdown.py) | |
 | Export a video's newest 500 YouTube comments to CSV | [python/youtube_comments_to_csv.py](python/youtube_comments_to_csv.py) | |
@@ -79,11 +79,11 @@ curl -X POST "https://api.apify.com/v2/acts/santiagomv~youtube-channel-videos/ru
 
 ### YouTube playlists and channels
 
-[youtube/](youtube/) is a dependency-free Python script and short tutorial for getting the transcripts or comments of a playlist's or channel's videos, with caps on videos, pages and actor charges (the charge cap doesn't include Apify platform usage).
+[youtube/](youtube/) is a dependency-free Python script and short tutorial for getting the transcripts or comments of a playlist's or channel's videos, with caps on videos, pages and actor charges (the charge cap bounds that run's charges, not later dataset reads or other account usage).
 
 ### Enrich a company list into a CSV
 
-[companies/](companies/) is a dependency-free Python script that turns a list of LinkedIn company URLs or slugs into a CSV with website, industry, size, headcount and HQ, with a default cap of 10 companies and $0.02 of actor charges per run (Apify platform usage is billed separately).
+[companies/](companies/) is a dependency-free Python script that turns a list of LinkedIn company URLs or slugs into a CSV with website, industry, size, headcount and HQ, with a default cap of 10 companies and $0.02 of actor charges per run (the cap covers that run's charges, not later dataset reads or other account usage).
 
 ### cURL: one call, results back as JSON
 
