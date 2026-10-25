@@ -30,6 +30,7 @@ The four job and post scrapers have an **only-new** mode: schedule them daily an
 | Track competitors' LinkedIn posts | [python/competitor_posts.py](python/competitor_posts.py) | |
 | No code: n8n daily job alert | [n8n/linkedin-jobs-daily.json](n8n/linkedin-jobs-daily.json) | |
 | No code, **experimental** (n8n/Sheets steps untested): n8n career-site jobs to Google Sheets | [n8n/ats-jobs-to-sheets.md](n8n/ats-jobs-to-sheets.md) | |
+| No code, **experimental** (n8n/Sheets steps untested): n8n LinkedIn company list to Google Sheets | [n8n/company-enrichment-to-sheets.md](n8n/company-enrichment-to-sheets.md) | |
 
 ### Also: YouTube transcripts
 

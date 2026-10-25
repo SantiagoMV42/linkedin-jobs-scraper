@@ -1,0 +1,313 @@
+{
+  "name": "company-enrichment-to-sheets",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual",
+      "name": "Manual run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "config",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "function canonicalCompany(value) {\n  if (typeof value !== \"string\" || !value.trim() || value.length > 2048)\n    throw Error(\"INVALID_COMPANY\");\n  let slug = value.trim();\n  if (slug.includes(\"/\") || slug.includes(\"://\")) {\n    const absolute = slug.includes(\"://\") ? slug : \"https://\" + slug, url = /^https?:\\/\\/((?:www\\.|[a-z]{2}\\.)?linkedin\\.com)(\\/[^?#\\s]*)?(?:\\?[^#\\s]*)?(?:#[^\\s]*)?$/i.exec(absolute);\n    if (!url)\n      throw Error(\"INVALID_COMPANY_URL\");\n    const match = /^\\/company\\/([^/]+)(?:\\/(?:about)?\\/?)?$/.exec(url[2] ?? \"\");\n    if (!match)\n      throw Error(\"INVALID_COMPANY_PATH\");\n    slug = match[1];\n  }\n  if (/%(?![\\da-f]{2})/i.test(slug))\n    throw Error(\"INVALID_COMPANY_ENCODING\");\n  try {\n    slug = decodeURIComponent(slug).toLowerCase();\n  } catch {\n    throw Error(\"INVALID_COMPANY_ENCODING\");\n  }\n  if (slug.length > 200 || !/^[\\p{L}\\p{N}_&'-]+(?:\\.[\\p{L}\\p{N}_&'-]+)*$/u.test(slug))\n    throw Error(\"INVALID_COMPANY_SLUG\");\n  return \"https://www.linkedin.com/company/\" + encodeURIComponent(slug).replace(/'/g, \"%27\") + \"/\";\n}\nfunction validateConfig(config) {\n  if (!config || !Array.isArray(config.companies) || config.companies.length > 1000 || !Number.isInteger(config.maxCompanies) || config.maxCompanies < 1 || config.maxCompanies > 100 || typeof config.maxTotalChargeUsd !== \"number\" || !Number.isFinite(config.maxTotalChargeUsd) || config.maxTotalChargeUsd <= 0 || config.maxTotalChargeUsd > 0.02)\n    throw Error(\"INVALID_CONFIG\");\n  const companies = [...new Set(config.companies.map(canonicalCompany))];\n  if (!companies.length || companies.length > config.maxCompanies)\n    throw Error(\"MAX_COMPANIES_EXCEEDED\");\n  return {\n    companies,\n    maxCompanies: config.maxCompanies,\n    maxTotalChargeUsd: config.maxTotalChargeUsd,\n    actorInput: {\n      companies,\n      includePosts: !1,\n      includeSimilarPages: !1,\n      maxConcurrency: 1,\n      proxyConfiguration: { useApifyProxy: !0 }\n    }\n  };\n}\nreturn [{ json: validateConfig({\n  companies: ['https://www.linkedin.com/company/stripe', 'https://www.linkedin.com/company/posthog'],\n  maxCompanies: 2,\n  maxTotalChargeUsd: 0.02\n}) }];"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.apify.com/v2/acts/santiagomv~linkedin-company/run-sync-get-dataset-items",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.actorInput) }}",
+        "options": {
+          "timeout": 300000,
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "fullResponse": true,
+              "neverError": false
+            }
+          },
+          "redirect": {
+            "redirect": {
+              "followRedirects": false
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "maxTotalChargeUsd",
+              "value": "={{ $json.maxTotalChargeUsd }}"
+            },
+            {
+              "name": "timeout",
+              "value": "240"
+            },
+            {
+              "name": "memory",
+              "value": "256"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            },
+            {
+              "name": "clean",
+              "value": "false"
+            }
+          ]
+        }
+      },
+      "id": "apify",
+      "name": "Apify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        440,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_BUYER_HEADER_AUTH_CREDENTIAL_ID",
+          "name": "Buyer Apify Authorization header"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    },
+    {
+      "id": "rows",
+      "name": "Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "function isPlainObject(value) {\n  if (!value || typeof value !== \"object\" || Array.isArray(value))\n    return !1;\n  const proto = Object.getPrototypeOf(value);\n  return proto === null || Object.getPrototypeOf(proto) === null;\n}\n\nfunction canonicalCompany(value) {\n  if (typeof value !== \"string\" || !value.trim() || value.length > 2048)\n    throw Error(\"INVALID_COMPANY\");\n  let slug = value.trim();\n  if (slug.includes(\"/\") || slug.includes(\"://\")) {\n    const absolute = slug.includes(\"://\") ? slug : \"https://\" + slug, url = /^https?:\\/\\/((?:www\\.|[a-z]{2}\\.)?linkedin\\.com)(\\/[^?#\\s]*)?(?:\\?[^#\\s]*)?(?:#[^\\s]*)?$/i.exec(absolute);\n    if (!url)\n      throw Error(\"INVALID_COMPANY_URL\");\n    const match = /^\\/company\\/([^/]+)(?:\\/(?:about)?\\/?)?$/.exec(url[2] ?? \"\");\n    if (!match)\n      throw Error(\"INVALID_COMPANY_PATH\");\n    slug = match[1];\n  }\n  if (/%(?![\\da-f]{2})/i.test(slug))\n    throw Error(\"INVALID_COMPANY_ENCODING\");\n  try {\n    slug = decodeURIComponent(slug).toLowerCase();\n  } catch {\n    throw Error(\"INVALID_COMPANY_ENCODING\");\n  }\n  if (slug.length > 200 || !/^[\\p{L}\\p{N}_&'-]+(?:\\.[\\p{L}\\p{N}_&'-]+)*$/u.test(slug))\n    throw Error(\"INVALID_COMPANY_SLUG\");\n  return \"https://www.linkedin.com/company/\" + encodeURIComponent(slug).replace(/'/g, \"%27\") + \"/\";\n}\n\nfunction validateConfig(config) {\n  if (!config || !Array.isArray(config.companies) || config.companies.length > 1000 || !Number.isInteger(config.maxCompanies) || config.maxCompanies < 1 || config.maxCompanies > 100 || typeof config.maxTotalChargeUsd !== \"number\" || !Number.isFinite(config.maxTotalChargeUsd) || config.maxTotalChargeUsd <= 0 || config.maxTotalChargeUsd > 0.02)\n    throw Error(\"INVALID_CONFIG\");\n  const companies = [...new Set(config.companies.map(canonicalCompany))];\n  if (!companies.length || companies.length > config.maxCompanies)\n    throw Error(\"MAX_COMPANIES_EXCEEDED\");\n  return {\n    companies,\n    maxCompanies: config.maxCompanies,\n    maxTotalChargeUsd: config.maxTotalChargeUsd,\n    actorInput: {\n      companies,\n      includePosts: !1,\n      includeSimilarPages: !1,\n      maxConcurrency: 1,\n      proxyConfiguration: { useApifyProxy: !0 }\n    }\n  };\n}\n\nfunction sheetCell(value) {\n  if (value === null || value === void 0)\n    return \"\";\n  if (typeof value === \"number\") {\n    if (!Number.isFinite(value))\n      throw Error(\"INVALID_CELL_NUMBER\");\n    return value;\n  }\n  if (typeof value === \"boolean\")\n    return value;\n  let text;\n  if (typeof value === \"string\")\n    text = value;\n  else if (Array.isArray(value) || isPlainObject(value)) {\n    const visit = (v, depth = 0) => {\n      if (depth > 16)\n        throw Error(\"CELL_TOO_DEEP\");\n      if (v === null || [\"string\", \"boolean\"].includes(typeof v))\n        return;\n      if (typeof v === \"number\" && Number.isFinite(v))\n        return;\n      if (Array.isArray(v)) {\n        for (const x of v)\n          visit(x, depth + 1);\n        return;\n      }\n      if (isPlainObject(v)) {\n        for (const x of Object.values(v))\n          visit(x, depth + 1);\n        return;\n      }\n      throw Error(\"INVALID_CELL_TYPE\");\n    };\n    visit(value);\n    text = JSON.stringify(value);\n  } else\n    throw Error(\"INVALID_CELL_TYPE\");\n  if (text.length > 45000)\n    throw Error(\"CELL_TOO_LONG\");\n  if (/^[\\s\\x00-\\x1f\\x7f\\ufeff]*[=+@-]/u.test(text) || /^[\\t\\r\\n]/.test(text))\n    text = \"'\" + text;\n  return text;\n}\n\nfunction normalizeResponse(response, config) {\n  const expected = new Set(validateConfig(config).companies);\n  if (!response || response.statusCode !== 201 || !Array.isArray(response.body) || !response.body.length || response.body.length > 1000)\n    throw Error(\"EXPECTED_HTTP_201_DATASET_ARRAY\");\n  const rows = new Map;\n  for (const company of response.body) {\n    if (!company || Array.isArray(company) || typeof company !== \"object\" || !isPlainObject(company) || typeof company.name !== \"string\" || !company.name.trim() || Object.hasOwn(company, \"error\") || Object.hasOwn(company, \"#error\"))\n      throw Error(\"INVALID_COMPANY_RESULT\");\n    const url = canonicalCompany(company.input);\n    if (!expected.has(url) || canonicalCompany(company.slug) !== url || company.url != null && canonicalCompany(company.url) !== url)\n      throw Error(\"UNEXPECTED_COMPANY_RESULT\");\n    if (typeof company.scrapedAt !== \"string\" || !/^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d(?:\\.\\d{1,3})?Z$/.test(company.scrapedAt) || !Number.isFinite(Date.parse(company.scrapedAt)))\n      throw Error(\"INVALID_SCRAPED_AT\");\n    const row = { url };\n    for (const key of [\"name\", \"website\", \"industry\", \"companySize\", \"headquarters\", \"description\", \"followers\", \"employeesOnLinkedIn\", \"scrapedAt\"])\n      row[key] = sheetCell(company[key]);\n    if (rows.has(url) && JSON.stringify(rows.get(url)) !== JSON.stringify(row))\n      throw Error(\"CONFLICTING_DUPLICATE_COMPANY\");\n    rows.set(url, row);\n  }\n  if (rows.size !== expected.size)\n    throw Error(\"INCOMPLETE_DATASET\");\n  return [...rows.values()];\n}\nconst inputs = $input.all();\nif (inputs.length !== 1) throw new Error('EXPECTED_SINGLE_RESPONSE');\nreturn normalizeResponse(inputs[0].json, $('Config').first().json).map(json => ({ json, pairedItem: { item: 0 } }));"
+      }
+    },
+    {
+      "parameters": {
+        "resource": "sheet",
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_BUYER_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Companies",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "url": "={{ $json.url }}",
+            "name": "={{ $json.name }}",
+            "website": "={{ $json.website }}",
+            "industry": "={{ $json.industry }}",
+            "companySize": "={{ $json.companySize }}",
+            "headquarters": "={{ $json.headquarters }}",
+            "description": "={{ $json.description }}",
+            "followers": "={{ $json.followers }}",
+            "employeesOnLinkedIn": "={{ $json.employeesOnLinkedIn }}",
+            "scrapedAt": "={{ $json.scrapedAt }}"
+          },
+          "matchingColumns": [
+            "url"
+          ],
+          "schema": [
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "industry",
+              "displayName": "industry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "companySize",
+              "displayName": "companySize",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "headquarters",
+              "displayName": "headquarters",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "followers",
+              "displayName": "followers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "employeesOnLinkedIn",
+              "displayName": "employeesOnLinkedIn",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "scrapedAt",
+              "displayName": "scrapedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "sheets",
+      "name": "Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        880,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_BUYER_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Buyer Google Sheets OAuth2"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    }
+  ],
+  "connections": {
+    "Manual run": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Apify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify": {
+      "main": [
+        [
+          {
+            "node": "Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rows": {
+      "main": [
+        [
+          {
+            "node": "Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Etc/UTC",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  },
+  "pinData": {}
+}
