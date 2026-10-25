@@ -53,17 +53,23 @@ def charge(value):
 def parser():
     p = argparse.ArgumentParser(description='Enrich a list of LinkedIn companies into a CSV with the santiagomv/linkedin-company '
                                 'Apify actor. Needs APIFY_TOKEN. Exit 0 = all rows, 2 = partial CSV, 1 = nothing written.')
-    p.add_argument('--input', default='companies.txt', help='one company URL or slug per line (default: %(default)s)')
+    p.add_argument('--input', default='companies.txt',
+                   help='one LinkedIn company URL or slug per line; names and domains are not looked up (default: %(default)s)')
     p.add_argument('--output', default='companies_enriched.csv', help='CSV to write (default: %(default)s)')
     p.add_argument('--diagnostics', help='run report JSON (default: <output>.diagnostics.json)')
-    p.add_argument('--max-charge-usd', type=charge, default=0.02, help='hard cost cap for the run in USD (default: %(default)s)')
+    p.add_argument('--resume-run-id', metavar='RUN_ID',
+                   help='start nothing; re-check an existing run of this actor whose input matches --input '
+                        '(same lines, same order) and write its CSV if it succeeded')
+    p.add_argument('--max-charge-usd', type=charge, default=0.02,
+                   help='hard cost cap in USD for a new run; does not change an existing run (default: %(default)s)')
     p.add_argument('--max-companies', type=bounded_int(1, MAX_COMPANIES), default=10,
-                   help='refuse inputs with more distinct companies than this, 1-100 (default: %(default)s)')
-    p.add_argument('--timeout-secs', type=bounded_int(1, 3600), default=300, help='actor run timeout (default: %(default)s)')
-    p.add_argument('--wait-secs', type=bounded_int(1, 3900), default=360, help='how long this script waits for the run (default: %(default)s)')
+                   help='refuse inputs with more distinct companies than this, 1-100; also applies on resume (default: %(default)s)')
+    p.add_argument('--timeout-secs', type=bounded_int(1, 3600), default=300, help='timeout for a new actor run (default: %(default)s)')
+    p.add_argument('--wait-secs', type=bounded_int(1, 3900), default=360,
+                   help='how long this script waits; the Apify run is not stopped when it expires (default: %(default)s)')
     p.add_argument('--http-timeout-secs', type=bounded_int(1, 120), default=30, help='per-request timeout (default: %(default)s)')
     p.add_argument('--poll-secs', type=bounded_int(1, 30), default=2, help='status poll interval (default: %(default)s)')
-    p.add_argument('--memory-mbytes', type=int, choices=[128, 256, 512, 1024], default=256, help='actor run memory (default: %(default)s)')
+    p.add_argument('--memory-mbytes', type=int, choices=[128, 256, 512, 1024], default=256, help='memory for a new actor run (default: %(default)s)')
     return p
 
 
@@ -138,11 +144,14 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 class Client:
-    def __init__(self, token, http_timeout, deadline, opener=None):
+    def __init__(self, token, http_timeout, deadline, opener=None, read_only=False):
         self.token, self.http_timeout, self.deadline = token, http_timeout, deadline
         self.opener = opener or urllib.request.build_opener(NoRedirect()).open
+        self.read_only = read_only
 
     def request(self, path, data=None, query=None):
+        if self.read_only and data is not None:
+            raise Error('RESUME_START_FORBIDDEN')
         remaining = self.deadline - time.monotonic()
         if remaining <= 0:
             raise Error('LOCAL_TIMEOUT')
@@ -174,6 +183,33 @@ def identifier(value):
     if not isinstance(value, str) or not ID.fullmatch(value):
         raise Error('API_INVALID_ID')
     return value
+
+
+def verify_run(run, run_id, actor_id=None):
+    if run.get('id') != run_id:
+        raise Error('RUN_ID_MISMATCH')
+    if actor_id is not None and run.get('actId') != actor_id:
+        raise Error('RUN_ACTOR_MISMATCH')
+
+
+def resume_run(client, run_id, companies):
+    run = object_data(client.request('/actor-runs/' + run_id))
+    verify_run(run, run_id)
+    actor_id = identifier(object_data(client.request('/acts/' + ACTOR)).get('id'))
+    verify_run(run, run_id, actor_id)
+    store = identifier(run.get('defaultKeyValueStoreId'))
+    stored = client.request(f'/key-value-stores/{store}/records/INPUT')
+    values = stored.get('companies') if isinstance(stored, dict) else None
+    if (not isinstance(values, list) or len(values) != len(companies)
+            or any(not isinstance(value, str) for value in values)):
+        raise Error('RUN_INPUT_MISMATCH')
+    try:
+        matches = [canonical(value) for value in values] == companies
+    except (Error, ValueError):
+        matches = False
+    if not matches:
+        raise Error('RUN_INPUT_MISMATCH')
+    return run, actor_id
 
 
 def csv_cell(value):
@@ -240,54 +276,98 @@ def download(client, run, companies, diagnostics):
 
 def execute(args, opener=None):
     token = os.environ.get('APIFY_TOKEN', '').strip()
+    resume_id = getattr(args, 'resume_run_id', None)
+    if resume_id is not None:
+        try:
+            resume_id = identifier(resume_id)
+        except Error:
+            print('INVALID_RUN_ID: --resume-run-id takes the run ID from the diagnostics file or the Apify '
+                  'Console (letters, digits, - and _ only). Nothing was sent.', file=sys.stderr)
+            args.blocked = True
+            raise
     diag_path = args.diagnostics or args.output + '.diagnostics.json'
     paths = [Path(p).resolve() for p in (args.input, args.output, diag_path)]
     if len(set(paths)) != 3:
+        print('PATH_COLLISION: --input, --output and the diagnostics file must be three different files. '
+              'Nothing was sent.', file=sys.stderr)
+        args.blocked = True
         raise Error('PATH_COLLISION')
+    previous = None
     if Path(diag_path).exists():
         try:
             previous = json.loads(Path(diag_path).read_text(encoding='utf-8'))
         except (OSError, ValueError):
+            print(f'INVALID_DIAGNOSTICS: {diag_path} is not a readable diagnostics file and may describe a paid run. '
+                  'Nothing was sent. Check it and Apify Console > Runs before moving it aside.', file=sys.stderr)
+            args.blocked = True
             return 1
-        if not isinstance(previous, dict) or (previous.get('start_attempted')
+        if resume_id is not None:
+            if not isinstance(previous, dict) or previous.get('run_id') != resume_id:
+                print(f'RESUME_DIAGNOSTICS_MISMATCH: {diag_path} does not record this run ID. Nothing was sent. '
+                      'Confirm the ID in Apify Console > Runs; if it is right, pass a new --diagnostics path.',
+                      file=sys.stderr)
+                args.blocked = True
+                return 1
+        elif not isinstance(previous, dict) or ((previous.get('start_attempted') or previous.get('resume_attempted'))
                                                and not previous.get('output_committed')):
             # Keep the original run evidence; an operator must reconcile/archive it.
-            print(f'Not starting: {diag_path} records a run that was never saved. Check it in the Apify '
-                  'Console, then move or delete that file (or pass another --diagnostics path).', file=sys.stderr)
+            print(f'Not starting a new run: {diag_path} records a run whose results were never saved. '
+                  'If it has a run_id, rerun with --resume-run-id <run_id> and the same input file. '
+                  'If run_id is empty, check Apify Console > Runs first. See the README.', file=sys.stderr)
             args.blocked = True
             return 1
     diagnostics = {'run_id': None, 'status': 'INPUT_VALIDATION', 'count': 0,
                    'failures': [], 'charged_event_counts': {}, 'omissions': [],
                    'start_attempted': False, 'output_committed': False}
+    if resume_id is not None:
+        if previous is not None:
+            diagnostics.update(previous)
+        diagnostics.update(run_id=resume_id, resume_attempted=True,
+                           resume_verified=False)
+        # Keep the original start/budget/charge evidence, even if verification fails.
+        if 'error' in diagnostics:
+            diagnostics.setdefault('previous_error', diagnostics.pop('error'))
 
     def save():
         atomic_write(diag_path, json.dumps(redact(diagnostics, token), ensure_ascii=False, indent=2) + '\n')
 
     try:
         companies = read_companies(args.input, args.max_companies)
-        diagnostics.update(input_count=len(companies), omissions=companies,
-                           max_charge_usd=args.max_charge_usd)
+        if resume_id is None:
+            diagnostics.update(input_count=len(companies), omissions=companies,
+                               max_charge_usd=args.max_charge_usd)
         if not token or any(ord(c) < 33 or ord(c) > 126 for c in token):
             raise Error('MISSING_OR_INVALID_APIFY_TOKEN')
         # Check destinations before creating a billable run.
         save()
         with tempfile.TemporaryFile(dir=Path(args.output).parent):
             pass
-        client = Client(token, args.http_timeout_secs, time.monotonic() + args.wait_secs, opener)
-        diagnostics.update(status='START_UNCONFIRMED', start_attempted=True)
-        save()
-        run = object_data(client.request(f'/acts/{ACTOR}/runs', data={
-            'companies': companies, 'includePosts': False, 'includeSimilarPages': False,
-        }, query={'timeout': args.timeout_secs, 'memory': args.memory_mbytes,
-                  'maxTotalChargeUsd': args.max_charge_usd}))
-        # Persist the ID before interpreting any other response fields.
-        diagnostics['run_id'] = identifier(run.get('id'))
+        client = Client(token, args.http_timeout_secs, time.monotonic() + args.wait_secs,
+                        opener, read_only=resume_id is not None)
+        actor_id = None
+        if resume_id is not None:
+            run, actor_id = resume_run(client, resume_id, companies)
+            diagnostics.update(resume_verified=True, input_count=len(companies),
+                               omissions=companies, count=0, failures=[], output_committed=False)
+            if 'options' in run:
+                diagnostics['run_options'] = run['options']
+            if 'maxTotalChargeUsd' in run:
+                diagnostics['run_max_total_charge_usd'] = run['maxTotalChargeUsd']
+        else:
+            diagnostics.update(status='START_UNCONFIRMED', start_attempted=True)
+            save()
+            run = object_data(client.request(f'/acts/{ACTOR}/runs', data={
+                'companies': companies, 'includePosts': False, 'includeSimilarPages': False,
+            }, query={'timeout': args.timeout_secs, 'memory': args.memory_mbytes,
+                      'maxTotalChargeUsd': args.max_charge_usd}))
+            # Persist the ID before interpreting any other response fields.
+            diagnostics['run_id'] = identifier(run.get('id'))
         save()
         while True:
             status = run.get('status')
             diagnostics['status'] = status
-            diagnostics['charged_event_counts'] = run.get('chargedEventCounts', {})
-            diagnostics['usage_total_usd'] = run.get('usageTotalUsd')
+            diagnostics['charged_event_counts'] = run.get('chargedEventCounts', diagnostics['charged_event_counts'])
+            diagnostics['usage_total_usd'] = run.get('usageTotalUsd', diagnostics.get('usage_total_usd'))
             save()
             if status in TERMINAL:
                 break
@@ -298,8 +378,7 @@ def execute(args, opener=None):
                 raise Error('LOCAL_TIMEOUT')
             time.sleep(min(args.poll_secs, remaining))
             run = object_data(client.request('/actor-runs/' + diagnostics['run_id']))
-            if run.get('id') != diagnostics['run_id']:
-                raise Error('RUN_ID_MISMATCH')
+            verify_run(run, diagnostics['run_id'], actor_id)
         if status != 'SUCCEEDED':
             store = run.get('defaultKeyValueStoreId')
             if isinstance(store, str) and ID.fullmatch(store):
